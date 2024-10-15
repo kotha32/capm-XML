@@ -1,0 +1,1 @@
+using capm as service from '../../srv/details';
