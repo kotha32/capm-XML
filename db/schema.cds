@@ -2,6 +2,7 @@ namespace com.sumanth.satinfotech;
 using { managed, cuid } from '@sap/cds/common';
 
 entity student:managed, cuid {
+    key ID : UUID;
     @title: 'Name'
     name: String(10);
     @title: 'Address1'

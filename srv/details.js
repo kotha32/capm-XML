@@ -1,60 +1,39 @@
 const cds = require('@sap/cds');
-const { XMLParser } = require('fast-xml-parser');
-const { Buffer } = require('buffer');
+const { create } = require('xmlbuilder2');
 
 module.exports = cds.service.impl(async function () {
-    const { student } = this.entities;
+    const { student } = this.entities; // Define the entity
 
-    // Event handler to fetch student data and return as XML
-    this.on('data', async (req) => {
-        try {
-            const students = await SELECT.from(student); // Ensure SELECT is imported from '@sap/cds'
-            const xmlData = jsonToXmlStudent(students);
+    this.on('data', 'student', async (req) => {
+        console.log(req.params); // Log the request parameters
+        const { ID } = req.params[0];  
 
-            if (!validateXml(xmlData)) {
-                throw new Error("Invalid XML format for student data");
-            }
+        // Fetch the student record by ID
+        const rowData = await SELECT.one.from(student).where({ ID : ID});
 
-            const base64Data = Buffer.from(xmlData).toString('base64');
-            return base64Data;
-        } catch (error) {
-            console.error("Error fetching student data:", error);
-            return Buffer.from("<error>Failed to fetch student data</error>").toString('base64');
+        // Check if the student data was found
+        if (!rowData) {
+            return req.error(404, `No data found for ID: ${ID}`);
         }
+
+        console.log("Row data:", rowData); // Log the fetched row data
+
+        // Create XML from the rowData
+        const xmlData = create({ version: '1.0', encoding: 'UTF-8' })
+            .ele('student')  // Root element
+            .ele('ID').txt(rowData.ID).up()
+            .ele('name').txt(rowData.name).up()
+            .ele('addr1').txt(rowData.addr1).up()
+            .ele('addr2').txt(rowData.addr2).up()
+            .ele('city').txt(rowData.city).up()
+            .ele('state').txt(rowData.state).up()
+            .ele('pincode').txt(rowData.pincode).up()
+            .ele('phone').txt(rowData.phone).up()
+            .end({ prettyPrint: true }); // Pretty print the XML
+
+        console.log("Generated XML:", xmlData); // Log the generated XML
+
+        // Return the generated XML as a string
+        return xmlData;  
     });
-
-    // Function to convert students JSON to XML
-    function jsonToXmlStudent(jsonData) {
-        if (!Array.isArray(jsonData)) {
-            return "<error>Invalid JSON data provided for students</error>";
-        }
-
-        let xml = '<?xml version="1.0" ?>\n<students>\n';
-        jsonData.forEach(item => {
-            xml += '    <student>\n';
-            xml += `        <name>${item.name || 'N/A'}</name>\n`;
-            xml += `        <addr1>${item.addr1 || 'N/A'}</addr1>\n`;
-            xml += `        <addr2>${item.addr2 || 'N/A'}</addr2>\n`;
-            xml += `        <city>${item.city || 'N/A'}</city>\n`;
-            xml += `        <state>${item.state || 'N/A'}</state>\n`;
-            xml += `        <pincode>${item.pincode || 'N/A'}</pincode>\n`;
-            xml += `        <phone>${item.phone || 'N/A'}</phone>\n`;
-            xml += '    </student>\n';
-        });
-
-        xml += '</students>';
-        return xml;
-    }
-
-    // Function to validate XML structure
-    function validateXml(xmlData) {
-        const parser = new XMLParser();
-        try {
-            parser.parse(xmlData);
-            return true; 
-        } catch (error) {
-            console.error("XML validation error:", error);
-            return false;
-        }
-    }
 });

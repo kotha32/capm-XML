@@ -11,21 +11,35 @@ sap.ui.define([
 
     return {
         fetch: function (oBindingContext, aSelectedContexts) {
-            // Create a status text element
-            var oStatusText = new Text({ text: "Starting to Fetch Student XML Data" });
+            console.log(aSelectedContexts);
 
-            // Create a TextArea for displaying the XML data
-            var oXMLDataTextArea = new TextArea({
-                width: "101%",
+            // Ensure selected contexts are available
+            if (!aSelectedContexts || aSelectedContexts.length === 0) {
+                MessageToast.show("No items selected.");
+                return;
+            }
+
+            let mParameters = {
+                contexts: aSelectedContexts,
+                label: 'Confirm',
+                invocationGrouping: true  // Fixed capitalization
+            };
+
+            // Create a status text element
+            var oStatusText = new Text({ text: "Starting to Fetch Student Data" });
+
+            // Create a TextArea for displaying the student data
+            var oDataTextArea = new TextArea({
+                width: "100%", // Adjusted width to a sensible value
                 rows: 20,
-                editable: false, 
-                value: "" 
+                editable: false,
+                value: ""
             });
 
-            // Create a dialog to show the status and XML data
+            // Create a dialog to show the status and student data
             var oDialog = new Dialog({
                 title: "Fetching Student Details",
-                content: [oStatusText, oXMLDataTextArea],
+                content: [oStatusText, oDataTextArea],
                 beginButton: new Button({
                     text: "Cancel",
                     press: function () {
@@ -40,28 +54,21 @@ sap.ui.define([
                 })
             });
 
+            // Open the dialog
             oDialog.open();
 
-            // Send the AJAX request to fetch student data
-            jQuery.ajax({
-                url: "/odata/v4/capm/data", // Adjusted endpoint for student data
-                method: "POST",  // Assuming POST based on your previous example
-                contentType: "application/json",
-
-                success: function (oData) {
-                    console.log("Student XML Data: ", oData);
-
-                    oStatusText.setText("Student XML fetched successfully!");
-
-                    // Convert the response to a readable format (assuming it's JSON encoded as XML string)
-                    oXMLDataTextArea.setValue(JSON.stringify(oData, null, 2));  // Display the JSON string for now
-                },
-
-                error: function (oError) {
-                    console.error("ERROR fetching student data: ", oError);
-                    oStatusText.setText("Error fetching student data!");
-                },
-            });
+            // Fetch student data using the action
+            this.editFlow.invokeAction('capm.data', mParameters) // Fixed mParameters variable name
+                .then(function (result) { // Corrected the arrow function syntax
+                    // Assuming result contains the data you want to display
+                    oDataTextArea.setValue(result); // You may need to format this based on actual result structure
+                    oStatusText.setText("Student Data Fetched Successfully");
+                })
+                .catch(function (error) { // Added error handling
+                    console.error("Error fetching student data:", error);
+                    MessageToast.show("Error fetching student data.");
+                    oStatusText.setText("Error fetching student data.");
+                });
         }
     };
 });

@@ -34,7 +34,6 @@ annotate capm.student with @(
     ],  
 );
 
-
 annotate capm.student with @(       
     UI.FieldGroup #studentInformation : {
         $Type : 'UI.FieldGroupType',
