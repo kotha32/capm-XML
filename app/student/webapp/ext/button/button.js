@@ -13,33 +13,26 @@ sap.ui.define([
         fetch: function (oBindingContext, aSelectedContexts) {
             console.log(aSelectedContexts);
 
-            // Ensure selected contexts are available
-            if (!aSelectedContexts || aSelectedContexts.length === 0) {
-                MessageToast.show("No items selected.");
-                return;
-            }
-
             let mParameters = {
-                contexts: aSelectedContexts,
+                contexts: aSelectedContexts[0],
                 label: 'Confirm',
-                invocationGrouping: true  // Fixed capitalization
+                invocationGrouping: true
             };
 
             // Create a status text element
-            var oStatusText = new Text({ text: "Starting to Fetch Student Data" });
+            var oStatusText = new Text({ text: "Starting to Fetch XML Data" });
 
-            // Create a TextArea for displaying the student data
-            var oDataTextArea = new TextArea({
-                width: "100%", // Adjusted width to a sensible value
-                rows: 20,
+            // Create a TextArea for displaying the XML data
+            var oXMLDataTextArea = new TextArea({
+                width: "100%",
+                rows: 10,
                 editable: false,
                 value: ""
             });
 
-            // Create a dialog to show the status and student data
             var oDialog = new Dialog({
-                title: "Fetching Student Details",
-                content: [oStatusText, oDataTextArea],
+                title: "Fetching Details",
+                content: [oStatusText, oXMLDataTextArea],
                 beginButton: new Button({
                     text: "Cancel",
                     press: function () {
@@ -47,28 +40,39 @@ sap.ui.define([
                     }
                 }),
                 endButton: new Button({
-                    text: "OK",
-                    press: function () {
+                    text: "Render PDF",
+                    press: async () => { 
+                        try {
+                            const xmlData = oXMLDataTextArea.getValue(); // Get XML data from TextArea
+                            await this.renderPdf(xmlData); // Call renderPdf function with the fetched XML data
+                            MessageToast.show("PDF rendered successfully! Check the console for base64.");
+                        } catch (error) {
+                            console.error("Error rendering PDF:", error);
+                            MessageToast.show("Error rendering PDF.");
+                        }
                         oDialog.close();
                     }
                 })
             });
 
-            // Open the dialog
             oDialog.open();
 
-            // Fetch student data using the action
-            this.editFlow.invokeAction('capm.data', mParameters) // Fixed mParameters variable name
-                .then(function (result) { // Corrected the arrow function syntax
-                    // Assuming result contains the data you want to display
-                    oDataTextArea.setValue(result); // You may need to format this based on actual result structure
-                    oStatusText.setText("Student Data Fetched Successfully");
+            // Invoke the action to fetch the product data
+            this.editFlow.invokeAction('capm.data', mParameters)
+                .then(function (result) {
+                    const abc = result.getObject().value; // Assuming this is the Base64 data you want to display
+                    oXMLDataTextArea.setValue(abc); // Set the fetched Base64 data in TextArea
+                    oStatusText.setText("XML Data fetched successfully."); // Update status text
                 })
-                .catch(function (error) { // Added error handling
-                    console.error("Error fetching student data:", error);
-                    MessageToast.show("Error fetching student data.");
-                    oStatusText.setText("Error fetching student data.");
+                .catch(function (error) {
+                    console.error("Error fetching product data:", error);
+                    oStatusText.setText("Error fetching product data."); // Update status on error
                 });
+        },
+
+        renderPdf: async function (xmlData) {
+            console.log("PDF rendering initiated with data:", xmlData);
+            // Add your PDF rendering logic here
         }
     };
 });
