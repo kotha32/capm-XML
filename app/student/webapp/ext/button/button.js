@@ -16,8 +16,8 @@ sap.ui.define([
 
             // Create a TextArea for displaying the XML data
             var oXMLDataTextArea = new TextArea({
-                width: "100%",
-                rows: 10,
+                width: "101%",
+                rows: 20,
                 editable: false, 
                 value: "" 
             });
