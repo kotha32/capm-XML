@@ -1,78 +1,69 @@
 sap.ui.define([
     "sap/m/MessageToast",
     "sap/ui/model/json/JSONModel",
-    "jquery.sap.global",
     "sap/m/Dialog",
-    "sap/m/Text",
     "sap/m/Button",
-    "sap/m/TextArea"
-], function (MessageToast, JSONModel, jQuery, Dialog, Text, Button, TextArea) {
+    "sap/ui/core/HTML"
+], function (MessageToast, JSONModel, Dialog, Button, HTML) {
     'use strict';
 
     return {
-        fetch: function (oBindingContext, aSelectedContexts) {
+        fetch : async function(oBindingContext, aSelectedContexts) {
             console.log(aSelectedContexts);
-
+                
             let mParameters = {
                 contexts: aSelectedContexts[0],
                 label: 'Confirm',
-                invocationGrouping: true
+                invocationGrouping: true    
             };
 
-            // Create a status text element
-            var oStatusText = new Text({ text: "Starting to Fetch XML Data" });
-
-            // Create a TextArea for displaying the XML data
-            var oXMLDataTextArea = new TextArea({
-                width: "100%",
-                rows: 10,
-                editable: false,
-                value: ""
-            });
-
-            var oDialog = new Dialog({
-                title: "Fetching Details",
-                content: [oStatusText, oXMLDataTextArea],
-                beginButton: new Button({
-                    text: "Cancel",
-                    press: function () {
-                        oDialog.close();
-                    }
-                }),
-                endButton: new Button({
-                    text: "Render PDF",
-                    press: async () => { 
-                        try {
-                            const xmlData = oXMLDataTextArea.getValue(); // Get XML data from TextArea
-                            await this.renderPdf(xmlData); // Call renderPdf function with the fetched XML data
-                            MessageToast.show("PDF rendered successfully! Check the console for base64.");
-                        } catch (error) {
-                            console.error("Error rendering PDF:", error);
-                            MessageToast.show("Error rendering PDF.");
-                        }
-                        oDialog.close();
-                    }
-                })
-            });
-
-            oDialog.open();
-
-            // Invoke the action to fetch the product data
             this.editFlow.invokeAction('capm.data', mParameters)
-                .then(function (result) {
-                    const abc = result.getObject().value; // Assuming this is the Base64 data you want to display
-                    oXMLDataTextArea.setValue(abc); // Set the fetched Base64 data in TextArea
-                    oStatusText.setText("XML Data fetched successfully."); // Update status text
+                .then(function(result) {
+                    let base64PDF = result.getObject().value;  
+                    const byteCharacters = atob(base64PDF);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                    const pdfUrl = URL.createObjectURL(blob);
+                    const oHtml = new HTML({
+                        content: `<iframe src="${pdfUrl}" width="100%" height="500px"></iframe>`
+                    });
+                    let oDialog = new Dialog({
+                        title: 'Generated PDF',
+                        contentWidth: "600px",
+                        contentHeight: "500px",
+                        verticalScrolling: true,
+                        content: oHtml,
+                        buttons: [
+                            new Button({
+                                text: 'Download',
+                                press: function () {
+                                    const link = document.createElement('a');
+                                    link.href = pdfUrl;
+                                    link.download = 'generated_pdf.pdf'; 
+                                    link.click();  
+                                }
+                            }),
+                            new Button({
+                                text: 'Close',
+                                press: function () {
+                                    oDialog.close();
+                                }
+                            })
+                        ],
+                        afterClose: function() {
+                            oDialog.destroy();
+                        }
+                    });
+                    oDialog.open();
                 })
-                .catch(function (error) {
-                    console.error("Error fetching product data:", error);
-                    oStatusText.setText("Error fetching product data."); // Update status on error
+                .catch(function(error) {
+                    MessageToast.show('Error occurred while converting to XML');
+                    console.error("Error:", error);
                 });
-        },
-
-        renderPdf: async function (xmlData) {
-            console.log("PDF rendering initiated with data:", xmlData);
-            // Add your PDF rendering logic here
         }
     };
 });
